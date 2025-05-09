@@ -11,7 +11,7 @@ if not vim.loop.fs_stat(lazypath) then
     }
 
     -- Run the command and check for errors
-    local result = vim.loop.system(cmd)
+    local result = vim.fn.system(cmd) -- Changed to vim.fn.system
     if result ~= 0 then
         vim.notify("Failed to clone lazy.nvim", vim.log.levels.ERROR)
         return
