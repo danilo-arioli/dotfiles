@@ -26,6 +26,10 @@ return {
     require("luasnip.loaders.from_vscode").lazy_load()
 
     cmp.setup({
+      window = {
+        completion = { border = "single", scrollbar = false },
+        documentation = { border = "single", scrollbar = false },
+      },
       completion = {
         completeopt = "menu,menuone,preview,noselect",
       },
