@@ -6,31 +6,63 @@ return {
 
     conform.setup({
       formatters_by_ft = {
-        javascript = { "prettier" },
-        typescript = { "prettier" },
-        javascriptreact = { "prettier" },
-        typescriptreact = { "prettier" },
-        svelte = { "prettier" },
-        css = { "prettier" },
-        html = { "prettier" },
-        json = { "prettier" },
-        yaml = { "prettier" },
-        markdown = { "prettier" },
-        graphql = { "prettier" },
-        liquid = { "prettier" },
+        javascript = { "prettierd" },
+        typescript = { "prettierd" },
+        javascriptreact = { "prettierd" },
+        typescriptreact = { "prettierd" },
+        svelte = { "prettierd" },
+        css = { "prettierd" },
+        html = { "prettierd" },
+        json = { "prettierd" },
+        yaml = { "prettierd" },
+        markdown = { "prettierd" },
+        graphql = { "prettierd" },
+        liquid = { "prettierd" },
         lua = { "stylua" },
         python = { "isort", "black" },
         php = { "php-cs-fixer" },
         blade = { "php-cs-fixer" },
       },
-      format_on_save = {
-        lsp_fallback = true,
-        async = false,
-        timeout_ms = 1000,
+      -- Disable format_on_save by default for large files
+      format_on_save = function(bufnr)
+        -- Disable for large files
+        local max_filesize = 100 * 1024 -- 100 KB
+        local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(bufnr))
+        if ok and stats and stats.size > max_filesize then
+          return nil
+        end
+
+        -- Disable if no formatter configured
+        local ft = vim.bo[bufnr].filetype
+        if not conform.formatters_by_ft[ft] then
+          return nil
+        end
+
+        return {
+          timeout_ms = 500, -- Reduced from 1000
+          lsp_fallback = true,
+          async = false,
+        }
+      end,
+      formatters = {
+        -- Configure prettierd for better performance
+        prettierd = {
+          env = {
+            PRETTIERD_DEFAULT_CONFIG = vim.fn.expand("~/.config/nvim/.prettierrc.json"),
+          },
+        },
       },
     })
 
+    -- Manual format command with better performance
     vim.keymap.set({ "n", "v" }, "<leader>mp", function()
+      -- Check file size before formatting
+      local file_size = vim.fn.getfsize(vim.fn.expand("%"))
+      if file_size > 100000 then
+        vim.notify("File too large to format (>100KB)", vim.log.levels.WARN)
+        return
+      end
+
       conform.format({
         lsp_fallback = true,
         async = false,
@@ -74,5 +106,16 @@ return {
         vim.notify("No formatters found for " .. filetype .. " files", vim.log.levels.WARN)
       end
     end, { nargs = "?" })
+
+    -- Add command to toggle format on save
+    vim.api.nvim_create_user_command("FormatToggle", function()
+      if vim.g.disable_autoformat then
+        vim.g.disable_autoformat = false
+        vim.notify("Format on save enabled", vim.log.levels.INFO)
+      else
+        vim.g.disable_autoformat = true
+        vim.notify("Format on save disabled", vim.log.levels.WARN)
+      end
+    end, {})
   end,
 }

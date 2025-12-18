@@ -27,30 +27,27 @@ return {
     mason_lspconfig.setup({
       -- list of servers for mason to install
       ensure_installed = {
-        "ts_ls",
+        "ts_ls", -- Using ts_ls instead of vtsls
         "html",
         "cssls",
         "tailwindcss",
-        "svelte",
         "lua_ls",
         "graphql",
         "emmet_ls",
         "prismals",
-        "pyright",
         "intelephense",
-        "docker_compose_language_service",
-        "dockerls",
-        "astro",
       },
+      -- Automatically install configured servers
+      automatic_installation = { exclude = { "vtsls" } }, -- Exclude vtsls to prevent conflicts
     })
 
     mason_tool_installer.setup({
       ensure_installed = {
-        "prettier", -- prettier formatter
+        "prettierd", -- fast prettier formatter (daemon)
         "stylua", -- lua formatter
-        "eslint_d",
-        "eslint",
+        "eslint_d", -- fast eslint (daemon)
         "php-cs-fixer",
+        "pylint",
       },
     })
   end,

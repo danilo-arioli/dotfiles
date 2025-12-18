@@ -24,7 +24,17 @@ return {
       defaults = {
         path_display = { "smart" },
         sorting_strategy = "ascending",
-        file_ignore_patterns = { "node_modules" },
+        file_ignore_patterns = { 
+          "node_modules",
+          "%.git/",
+          "%.next/",
+          "%.turbo/",
+          "%.cache/",
+          "dist/",
+          "build/",
+        },
+        -- Don't follow symlinks to avoid scanning pnpm's .pnpm directory
+        follow_symlinks = false,
         generic_sorter = require("telescope.sorters").get_generic_fuzzy_sorter,
         mappings = {
           i = {

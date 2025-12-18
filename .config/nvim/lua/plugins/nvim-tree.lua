@@ -43,8 +43,24 @@ return {
         },
       },
       filters = {
-        custom = { ".DS_Store" },
+        custom = { 
+          ".DS_Store",
+          "^.git$",
+          "^.next$",
+          "^.turbo$",
+          "^node_modules$",
+        },
         dotfiles = false,
+      },
+      filesystem_watchers = {
+        enable = true,
+        debounce_delay = 300,
+        ignore_dirs = {
+          "node_modules",
+          ".git",
+          ".next",
+          ".turbo",
+        },
       },
       disable_netrw = true,
       hijack_netrw = true,

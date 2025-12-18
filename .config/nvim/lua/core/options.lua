@@ -38,3 +38,26 @@ opt.splitbelow = true -- split horizontal window to the bottom
 
 -- turn off swapfile
 opt.swapfile = false
+
+-- Performance optimizations
+opt.updatetime = 300 -- faster completion
+opt.timeoutlen = 500 -- faster key sequence completion
+opt.ttimeoutlen = 10 -- faster escape sequences
+opt.redrawtime = 1000 -- allow more time for redrawing
+opt.synmaxcol = 200 -- limit syntax highlighting to 200 columns
+
+-- Limit syntax highlighting for large files
+vim.api.nvim_create_autocmd("BufReadPre", {
+  pattern = "*",
+  callback = function()
+    local max_filesize = 100 * 1024 -- 100 KB
+    local ok, stats = pcall(vim.loop.fs_stat, vim.fn.expand("%:p"))
+    if ok and stats and stats.size > max_filesize then
+      vim.cmd("syntax off")
+      vim.opt_local.spell = false
+      vim.opt_local.swapfile = false
+      vim.opt_local.undofile = false
+      vim.opt_local.backup = false
+    end
+  end,
+})

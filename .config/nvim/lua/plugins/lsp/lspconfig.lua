@@ -71,18 +71,157 @@ return {
     local capabilities = cmp_nvim_lsp.default_capabilities()
 
     -- Change the Diagnostic symbols in the sign column (gutter)
-    -- (not in youtube nvim video)
-    local signs = { Error = " ", Warn = " ", Hint = "󰠠 ", Info = " " }
+    local signs = { Error = " ", Warn = " ", Hint = "󰠠 ", Info = " " }
     for type, icon in pairs(signs) do
       local hl = "DiagnosticSign" .. type
       vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
     end
 
+    -- Configure diagnostics for better performance
+    vim.diagnostic.config({
+      virtual_text = {
+        spacing = 4,
+        prefix = "●",
+      },
+      signs = true,
+      underline = true,
+      update_in_insert = false, -- Don't update diagnostics while typing
+      severity_sort = true,
+    })
+
     mason_lspconfig.setup({
       -- default handler for installed servers
       function(server_name)
+        -- Skip vtsls if ts_ls is being used (prevents duplicates)
+        if server_name == "vtsls" then
+          return
+        end
+        
         lspconfig[server_name].setup({
           capabilities = capabilities,
+        })
+      end,
+      ["ts_ls"] = function()
+        local util = require("lspconfig.util")
+        lspconfig["ts_ls"].setup({
+          capabilities = capabilities,
+          -- CRITICAL FIX: In monorepos, find the NEAREST package.json (not root!)
+          -- This prevents scanning the entire 5GB+ monorepo from the root
+          root_dir = function(fname)
+            -- First try to find tsconfig.json (most specific to the app)
+            local tsconfig_root = util.root_pattern("tsconfig.json")(fname)
+            if tsconfig_root then
+              return tsconfig_root
+            end
+            -- Then look for package.json, but ONLY if it's not in a parent with pnpm-workspace.yaml
+            local package_root = util.root_pattern("package.json")(fname)
+            if package_root then
+              -- Check if this is the monorepo root (has pnpm-workspace.yaml or lerna.json)
+              local is_monorepo_root = util.root_pattern("pnpm-workspace.yaml", "lerna.json")(package_root)
+              if not is_monorepo_root then
+                return package_root
+              end
+            end
+            return nil
+          end,
+          single_file_support = false, -- Don't attach to random TS files outside projects
+          -- CRITICAL: Exclude symlinked workspace packages to prevent scanning entire monorepo
+          on_new_config = function(config, root_dir)
+            -- Ensure TypeScript doesn't follow symlinks in node_modules
+            config.settings = vim.tbl_deep_extend("force", config.settings or {}, {
+              typescript = {
+                tsserver = {
+                  maxTsServerMemory = 4096,
+                  watchOptions = {
+                    excludeDirectories = {
+                      "**/node_modules",
+                      "**/.git",
+                      "**/.next",
+                      "**/.turbo",
+                    },
+                  },
+                },
+              },
+            })
+          end,
+          settings = {
+            typescript = {
+              inlayHints = {
+                includeInlayParameterNameHints = "literal",
+                includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+                includeInlayFunctionParameterTypeHints = false,
+                includeInlayVariableTypeHints = false,
+                includeInlayPropertyDeclarationTypeHints = false,
+                includeInlayFunctionLikeReturnTypeHints = false,
+                includeInlayEnumMemberValueHints = false,
+              },
+              tsserver = {
+                maxTsServerMemory = 4096,
+                useSyntaxServer = "auto",
+              },
+              diagnostics = {
+                ignoredCodes = { 6133 },
+              },
+            },
+            javascript = {
+              inlayHints = {
+                includeInlayParameterNameHints = "all",
+                includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+                includeInlayFunctionParameterTypeHints = false,
+                includeInlayVariableTypeHints = false,
+                includeInlayPropertyDeclarationTypeHints = false,
+                includeInlayFunctionLikeReturnTypeHints = false,
+                includeInlayEnumMemberValueHints = false,
+              },
+            },
+          },
+          init_options = {
+            preferences = {
+              -- Disable expensive features in large monorepos
+              disableSuggestions = false,
+              quotePreference = "auto",
+              importModuleSpecifierPreference = "relative",
+              importModuleSpecifierEnding = "auto",
+              allowIncompleteCompletions = true,
+              allowRenameOfImportPath = false, -- Disable for performance
+            },
+            hostInfo = "neovim",
+          },
+          flags = {
+            debounce_text_changes = 300, -- Increased debounce for better performance
+          },
+          -- Disable semantic tokens for better performance and prevent duplicates
+          on_attach = function(client, bufnr)
+            client.server_capabilities.semanticTokensProvider = nil
+            
+            -- TypeScript handles completions, disable others if ts_ls is active
+            local active_clients = vim.lsp.get_active_clients({ bufnr = bufnr })
+            for _, c in ipairs(active_clients) do
+              if c.name ~= "ts_ls" and c.name ~= "tailwindcss" then
+                -- Disable completion for non-essential LSPs when TypeScript is active
+                if c.name == "html" or c.name == "emmet_ls" or c.name == "cssls" then
+                  c.server_capabilities.completionProvider = nil
+                end
+              end
+            end
+          end,
+        })
+      end,
+      ["tailwindcss"] = function()
+        local util = require("lspconfig.util")
+        lspconfig["tailwindcss"].setup({
+          capabilities = capabilities,
+          root_dir = util.root_pattern("tailwind.config.js", "tailwind.config.ts", "postcss.config.js"),
+          settings = {
+            tailwindCSS = {
+              experimental = {
+                classRegex = {
+                  { "cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+                  { "cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)" },
+                },
+              },
+            },
+          },
         })
       end,
       ["intelephense"] = function()
@@ -99,32 +238,14 @@ return {
           end,
         })
       end,
-      ["svelte"] = function()
-        -- configure svelte server
-        lspconfig["svelte"].setup({
-          capabilities = capabilities,
-          on_attach = function(client, bufnr)
-            vim.api.nvim_create_autocmd("BufWritePost", {
-              pattern = { "*.js", "*.ts" },
-              callback = function(ctx)
-                -- Here use ctx.match instead of ctx.file
-                client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.match })
-              end,
-            })
-          end,
-        })
-      end,
-      ["graphql"] = function()
-        -- configure graphql language server
-        lspconfig["graphql"].setup({
-          capabilities = capabilities,
-          filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" },
-        })
-      end,
       ["emmet_ls"] = function()
         -- configure emmet language server
+        local emmet_capabilities = vim.deepcopy(capabilities)
+        -- Reduce emmet priority to prevent duplicates with other LSPs
+        emmet_capabilities.textDocument.completion.completionItem.snippetSupport = true
+        
         lspconfig["emmet_ls"].setup({
-          capabilities = capabilities,
+          capabilities = emmet_capabilities,
           filetypes = {
             "html",
             "typescriptreact",
@@ -136,6 +257,48 @@ return {
             "svelte",
             "php",
             "blade",
+          },
+          init_options = {
+            showExpandedAbbreviation = "inMarkupAndStylesheetFilesOnly",
+            showSuggestionsAsSnippets = true,
+          },
+        })
+      end,
+      ["html"] = function()
+        -- configure html language server with reduced completions
+        local html_capabilities = vim.deepcopy(capabilities)
+        html_capabilities.textDocument.completion.completionItem.snippetSupport = true
+        
+        lspconfig["html"].setup({
+          capabilities = html_capabilities,
+          init_options = {
+            provideFormatter = false, -- Use prettier instead
+          },
+        })
+      end,
+      ["cssls"] = function()
+        -- configure css language server
+        lspconfig["cssls"].setup({
+          capabilities = capabilities,
+          settings = {
+            css = {
+              validate = true,
+              lint = {
+                unknownAtRules = "ignore",
+              },
+            },
+            scss = {
+              validate = true,
+              lint = {
+                unknownAtRules = "ignore",
+              },
+            },
+            less = {
+              validate = true,
+              lint = {
+                unknownAtRules = "ignore",
+              },
+            },
           },
         })
       end,
@@ -156,6 +319,13 @@ return {
           },
         })
       end,
+      -- Explicitly disable vtsls to prevent conflicts with ts_ls
+      ["vtsls"] = function()
+        -- Do nothing - we're using ts_ls instead
+      end,
     })
+    
+    -- Disable vtsls globally to prevent auto-attachment
+    vim.g.vtsls_disable = true
   end,
 }
