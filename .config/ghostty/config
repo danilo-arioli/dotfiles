@@ -65,3 +65,4 @@ keybind = super+ctrl+h=resize_split:left,10
 keybind = super+ctrl+l=resize_split:right,10
 keybind = super+j=new_split:down
  resize-overlay-duration = 4s 200ms
+keybind = shift+enter=text:\x1b\r
