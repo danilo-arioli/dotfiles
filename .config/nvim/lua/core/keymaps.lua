@@ -47,3 +47,6 @@ vim.api.nvim_set_keymap("n", "<S-Tab>", ":tabprevious<CR>", { noremap = true, si
 -- Remap the esc key
 vim.api.nvim_set_keymap("i", "<A-q>", "<Esc>", { noremap = true, silent = true })
 vim.api.nvim_set_keymap("x", "<A-q>", "<Esc>", { noremap = true, silent = true })
+
+-- Stop search highlighting (Stop Search)
+vim.api.nvim_set_keymap("n", "<leader>ss", ":nohlsearch<CR>", { noremap = true, silent = true })
