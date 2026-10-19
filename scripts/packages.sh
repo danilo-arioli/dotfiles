@@ -25,7 +25,7 @@ install_macos() {
 
   info "Installing casks"
   # Casks are allowed to fail individually (already installed by hand, etc.)
-  for cask in ghostty font-jetbrains-mono-nerd-font; do
+  for cask in ghostty font-jetbrains-mono-nerd-font claude-code; do
     if brew list --cask "$cask" >/dev/null 2>&1; then
       skip "cask $cask already installed"
     else
@@ -58,6 +58,8 @@ install_arch() {
   fi
 
   run sudo pacman -S --needed --noconfirm "${pkgs[@]}"
+
+  install_claude_code
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -94,6 +96,7 @@ install_debian() {
   gh_release_install sxyazi/yazi           "yazi-${ARCH}-unknown-linux-gnu\.zip"             yazi    || true
 
   install_composer_linux
+  install_claude_code
 
   if [[ "$IS_WSL" == "1" ]]; then
     skip "WSL2 — install the JetBrainsMono Nerd Font on the Windows host instead"
@@ -186,6 +189,21 @@ install_nerd_font_linux() {
     && { have fc-cache && fc-cache -f "$dir" >/dev/null; ok "JetBrainsMono Nerd Font installed"; } \
     || warn "Nerd Font install failed — install it manually"
   rm -rf "$tmp"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Claude Code (Linux) — macOS gets it from the claude-code cask instead.
+# The native installer drops a self-contained binary in ~/.local/bin, which
+# .zshrc already puts on $PATH, and it self-updates from there.
+# ─────────────────────────────────────────────────────────────────────────────
+install_claude_code() {
+  if have claude; then
+    skip "claude code already installed ($(command -v claude))"
+    return 0
+  fi
+  info "Installing Claude Code"
+  run bash -c "curl -fsSL https://claude.ai/install.sh | bash" \
+    || warn "Claude Code install failed — see https://docs.claude.com/en/docs/claude-code"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

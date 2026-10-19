@@ -49,6 +49,7 @@ Steps, in order: `packages`, `node`, `link`, `tpm`, `shell`.
 | CLI | ripgrep, fd, fzf, eza, zoxide, bat, jq, lazygit, yazi | same | apt where available, GitHub release binaries into `~/.local/bin` otherwise |
 | PHP | php + composer (brew) | php + composer (pacman) | php-cli & extensions (apt) + Composer via the verified installer |
 | Node | nvm → node LTS → pnpm (corepack) | same | same |
+| Claude Code | `claude-code` cask | native installer → `~/.local/bin` | native installer → `~/.local/bin` |
 | Terminal | Ghostty + JetBrainsMono Nerd Font (casks) | Ghostty + `ttf-jetbrains-mono-nerd` | font skipped under WSL2 — install it on the Windows host |
 | Desktop | — | Hyprland, waybar, wofi, hyprlock, hypridle & friends | — |
 
