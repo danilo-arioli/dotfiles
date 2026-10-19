@@ -1,0 +1,27 @@
+# Files in this repo that must NOT be symlinked into $HOME.
+# Each line is a Perl regex matched against the basename (or the full path,
+# relative to the repo root, when the pattern contains a slash).
+#
+# NOTE: providing this file REPLACES stow's built-in default ignore list,
+# so the usual defaults (.git, README.*, ...) are repeated here.
+
+# stow defaults
+\.git
+\.gitignore
+\.gitmodules
+\.github
+README.*
+LICENSE.*
+COPYING
+
+# the installer itself
+install\.sh
+scripts
+\.stow-local-ignore
+
+# templates / local-only
+\.zshrc\.local\.example
+\.zshrc\.local
+
+# noise
+\.DS_Store

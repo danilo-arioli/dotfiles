@@ -1,0 +1,7 @@
+# Copy to ~/.zshrc.local — this file is machine-specific and never committed.
+#
+# Examples of things that belong here:
+
+# alias libreoffice='/Applications/LibreOffice.app/Contents/MacOS/soffice'
+# export COMPANY_API_TOKEN="..."
+# export PATH="$HOME/work/bin:$PATH"
