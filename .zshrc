@@ -39,12 +39,21 @@ path=(
 )
 
 # pnpm — location differs per platform
-if [[ "$DOTFILES_OS" == "macos" ]]; then
+if [[ "$OSTYPE" == darwin* ]]; then
   export PNPM_HOME="$HOME/Library/pnpm"
 else
   export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
 fi
-path=("$PNPM_HOME" $path)
+
+if [[ -d "$PNPM_HOME" ]]; then
+  # Newer pnpm versions use bin/, older ones use the root folder
+  for dir in "$PNPM_HOME/bin" "$PNPM_HOME"; do
+    case ":$PATH:" in
+      *":$dir:"*) ;;
+      *) [[ -d "$dir" ]] && export PATH="$dir:$PATH" ;;
+    esac
+  done
+fi
 
 # Homebrew python (only if that exact version is installed)
 for py in /opt/homebrew/opt/python@3.14 /usr/local/opt/python@3.14; do
